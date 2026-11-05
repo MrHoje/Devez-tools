@@ -1,0 +1,101 @@
+<UserControl x:Class="DevezTools.Views.TextCompareView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:DevezTools.Infrastructure">
+    <UserControl.Resources>
+        <!-- 비교 편집기: 줄이 맞아야 하므로 자동 줄바꿈 없이 가로 스크롤 -->
+        <Style x:Key="CompareBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource CodeTextBox}">
+            <Setter Property="Padding" Value="8,8,4,8" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid x:Name="Root">
+        <!-- 요약 + 좌우 바꾸기: 생성자에서 떼어 내 창의 제목 줄 오른쪽에 둔다(카드 시작 높이를 다른 화면과 맞춘다) -->
+        <DockPanel x:Name="HeaderBar">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconArrowLeftRight}" Content="좌우 바꾸기" Click="Swap_Click" />
+                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconRotateCcw}" Content="모두 지우기" Click="ClearAll_Click" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border x:Name="RemovedChip" Style="{StaticResource Chip}" Margin="0,0,6,0" Background="{DynamicResource DiffDelBrush}" Visibility="Collapsed">
+                    <TextBlock x:Name="RemovedText" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource DangerBrush}" />
+                </Border>
+                <Border x:Name="AddedChip" Style="{StaticResource Chip}" Margin="0,0,6,0" Background="{DynamicResource DiffAddBrush}" Visibility="Collapsed">
+                    <TextBlock x:Name="AddedText" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" />
+                </Border>
+                <TextBlock x:Name="SummaryText" VerticalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource TextMutedBrush}" />
+            </StackPanel>
+        </DockPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="220" />
+                <ColumnDefinition Width="7" />
+                <ColumnDefinition Width="*" MinWidth="220" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource CardHeader}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconClipboard}" Content="붙여넣기" Click="PasteLeft_Click" />
+                                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconCopy}" ToolTip="복사" Click="CopyLeft_Click" />
+                                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconRotateCcw}" ToolTip="지우기" Click="ClearLeft_Click" />
+                            </StackPanel>
+                            <Rectangle Width="3" Height="12" Margin="0,0,8,0" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource DangerBrush}" />
+                            <TextBlock Style="{StaticResource CardTitle}" Text="원본" />
+                            <TextBlock x:Name="LeftMeta" Style="{StaticResource CardMeta}" />
+                        </DockPanel>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="48" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <!-- 줄 번호 칸: 카드의 왼쪽 아래 둥근 모서리에 맞춘다 -->
+                        <Border Grid.Column="0" CornerRadius="0,0,0,11" Background="{DynamicResource PanelSoftBrush}">
+                            <Canvas x:Name="LeftGutter" ClipToBounds="True" />
+                        </Border>
+                        <Canvas x:Name="LeftMarks" Grid.Column="1" ClipToBounds="True" IsHitTestVisible="False" />
+                        <TextBox x:Name="LeftBox" Grid.Column="1" Style="{StaticResource CompareBox}" Tag="원본 글을 붙여 넣어 주십시오."
+                                 TextChanged="Box_TextChanged" ScrollViewer.ScrollChanged="LeftBox_ScrollChanged" SizeChanged="Box_SizeChanged" />
+                    </Grid>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Style="{StaticResource GapSplitterV}" />
+
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Style="{StaticResource CardHeader}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconClipboard}" Content="붙여넣기" Click="PasteRight_Click" />
+                                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconCopy}" ToolTip="복사" Click="CopyRight_Click" />
+                                <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconRotateCcw}" ToolTip="지우기" Click="ClearRight_Click" />
+                            </StackPanel>
+                            <Rectangle Width="3" Height="12" Margin="0,0,8,0" RadiusX="1.5" RadiusY="1.5" Fill="{DynamicResource SuccessBrush}" />
+                            <TextBlock Style="{StaticResource CardTitle}" Text="수정본" />
+                            <TextBlock x:Name="RightMeta" Style="{StaticResource CardMeta}" />
+                        </DockPanel>
+                    </Border>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="48" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" CornerRadius="0,0,0,11" Background="{DynamicResource PanelSoftBrush}">
+                            <Canvas x:Name="RightGutter" ClipToBounds="True" />
+                        </Border>
+                        <Canvas x:Name="RightMarks" Grid.Column="1" ClipToBounds="True" IsHitTestVisible="False" />
+                        <TextBox x:Name="RightBox" Grid.Column="1" Style="{StaticResource CompareBox}" Tag="수정한 글을 붙여 넣어 주십시오."
+                                 TextChanged="Box_TextChanged" ScrollViewer.ScrollChanged="RightBox_ScrollChanged" SizeChanged="Box_SizeChanged" />
+                    </Grid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

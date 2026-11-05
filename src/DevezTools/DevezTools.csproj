@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- 주 화면은 WPF이며 DPI는 app.manifest의 PerMonitorV2 설정을 따른다. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>devezTools</AssemblyName>
+    <RootNamespace>DevezTools</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>devezTools</Product>
+    <!-- WPF 번역 리소스는 한국어만 담는다. -->
+    <SatelliteResourceLanguages>ko</SatelliteResourceLanguages>
+    <!-- OCR 네이티브 라이브러리(ONNX Runtime·SkiaSharp)는 Windows x64 것만 담는다. 출력 폴더는 그대로 둔다. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+    <Resource Include="Assets\app.ico" />
+    <Resource Include="Fonts\Pretendard-Regular.ttf" />
+    <Resource Include="Fonts\Pretendard-Medium.ttf" />
+    <Resource Include="Fonts\Pretendard-SemiBold.ttf" />
+    <Resource Include="Fonts\Pretendard-Bold.ttf" />
+    <None Include="Fonts\Pretendard-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 텍스트 추출: PaddleOCR ONNX 모델(검출·방향 모델은 빌드 때 models\v5 로 복사된다) -->
+    <PackageReference Include="RapidOcrNet" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DevezTools.Tests" />
+  </ItemGroup>
+</Project>

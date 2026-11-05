@@ -1,0 +1,67 @@
+<UserControl x:Class="DevezTools.Views.FormatView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:DevezTools.Infrastructure">
+    <!-- JSON·XML 정렬 공용: 왼쪽 입력, 오른쪽 결과(입력하는 대로 다시 정렬) -->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="240" />
+            <ColumnDefinition Width="7" />
+            <ColumnDefinition Width="*" MinWidth="240" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Style="{StaticResource Card}">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Style="{StaticResource CardHeader}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconClipboard}" Content="붙여넣기" Click="Paste_Click" />
+                            <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconRotateCcw}" Content="지우기" Click="Clear_Click" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="입력" />
+                        <TextBlock x:Name="InputMeta" Style="{StaticResource CardMeta}" />
+                    </DockPanel>
+                </Border>
+                <TextBox x:Name="InputText" Style="{StaticResource CodeTextBox}" TextChanged="InputText_TextChanged" />
+            </DockPanel>
+        </Border>
+
+        <GridSplitter Grid.Column="1" Style="{StaticResource GapSplitterV}" />
+
+        <Border Grid.Column="2" Style="{StaticResource Card}">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Style="{StaticResource CardHeader}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <!-- JSON 만: 정렬 / 한 줄 -->
+                            <Border x:Name="ModeSelector" Style="{StaticResource SegmentSelector}" Margin="0,0,6,0" Visibility="Collapsed">
+                                <Grid x:Name="ModeHost">
+                                    <Border x:Name="ModeIndicator" Style="{StaticResource SegmentIndicator}" />
+                                    <StackPanel x:Name="ModeTabs" Orientation="Horizontal">
+                                        <RadioButton x:Name="IndentMode" Style="{StaticResource SegmentTab}" GroupName="FormatMode" Content="정렬" IsChecked="True" Checked="Mode_Checked" />
+                                        <RadioButton Style="{StaticResource SegmentTab}" GroupName="FormatMode" Content="한 줄" Checked="Mode_Checked" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                            <Button Style="{StaticResource ToolButton}" infra:Icon.Data="{StaticResource IconCopy}" Content="복사" Click="Copy_Click" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource CardTitle}" Text="결과" />
+                        <TextBlock x:Name="OutputMeta" Style="{StaticResource CardMeta}" />
+                    </DockPanel>
+                </Border>
+                <Grid>
+                    <TextBox x:Name="OutputText" Style="{StaticResource CodeTextBox}" IsReadOnly="True" IsReadOnlyCaretVisible="True" />
+                    <!-- 문법 오류: 결과 자리에 위치와 이유를 보인다 -->
+                    <Border x:Name="ErrorPanel" Margin="12" Padding="12,10" VerticalAlignment="Top" CornerRadius="10"
+                            Background="{DynamicResource PanelSoftBrush}" Visibility="Collapsed">
+                        <DockPanel>
+                            <Path DockPanel.Dock="Left" Style="{StaticResource LucideIcon}" Data="{StaticResource IconX}" Width="12" Height="12"
+                                  Margin="0,3,8,0" VerticalAlignment="Top" StrokeThickness="2" Stroke="{DynamicResource DangerBrush}" />
+                            <TextBlock x:Name="ErrorText" TextWrapping="Wrap" FontSize="12.5" LineHeight="19" Foreground="{DynamicResource DangerBrush}" />
+                        </DockPanel>
+                    </Border>
+                </Grid>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>
