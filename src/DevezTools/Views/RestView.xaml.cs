@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Net.Http;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -25,10 +26,14 @@ public partial class RestView : UserControl
 
         MethodBox.ItemsSource = RestClient.Methods;
         MethodBox.SelectedIndex = 0;
+        // 헤더·파라미터 줄은 목록 템플릿 안이라 Drafts 가 이름으로 찾지 못해 직접 맡긴다(줄이 바뀌면 UpdateRowState 가 다시 담는다)
+        SavedRequest? draft = null;
+        try { draft = Drafts.Get(RowsDraftKey) is string json ? JsonSerializer.Deserialize<SavedRequest>(json) : null; }
+        catch (JsonException) { }
         _headers.CollectionChanged += Rows_CollectionChanged;
         _params.CollectionChanged += Rows_CollectionChanged;
-        _headers.Add(new KeyValueRow());
-        _params.Add(new KeyValueRow());
+        Fill(_headers, draft?.Headers ?? []);
+        Fill(_params, draft?.Params ?? []);
         KvList.ItemsSource = _headers;
         SegmentedTabs.Attach(KvTabHost, KvTabs, KvTabIndicator);
 
@@ -38,6 +43,8 @@ public partial class RestView : UserControl
         UpdateSavedEmpty();
         UpdateRowState();
     }
+
+    private const string RowsDraftKey = "rest.rows";
 
     private ObservableCollection<KeyValueRow> ActiveRows => ParamsTab.IsChecked == true ? _params : _headers;
 
@@ -57,6 +64,7 @@ public partial class RestView : UserControl
         HeadersTab.Content = Label("헤더", _headers);
         ParamsTab.Content = Label("파라미터", _params);
         SelectAll.IsChecked = ActiveRows.Count > 0 && ActiveRows.All(r => r.Enabled);
+        Drafts.Set(RowsDraftKey, JsonSerializer.Serialize(new SavedRequest { Headers = [.. _headers], Params = [.. _params] }));
 
         static string Label(string name, IEnumerable<KeyValueRow> rows)
         {

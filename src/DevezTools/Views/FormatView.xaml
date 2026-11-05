@@ -39,7 +39,7 @@
                                     <Border x:Name="ModeIndicator" Style="{StaticResource SegmentIndicator}" />
                                     <StackPanel x:Name="ModeTabs" Orientation="Horizontal">
                                         <RadioButton x:Name="IndentMode" Style="{StaticResource SegmentTab}" GroupName="FormatMode" Content="정렬" IsChecked="True" Checked="Mode_Checked" />
-                                        <RadioButton Style="{StaticResource SegmentTab}" GroupName="FormatMode" Content="한 줄" Checked="Mode_Checked" />
+                                        <RadioButton x:Name="CompactMode" Style="{StaticResource SegmentTab}" GroupName="FormatMode" Content="한 줄" Checked="Mode_Checked" />
                                     </StackPanel>
                                 </Grid>
                             </Border>

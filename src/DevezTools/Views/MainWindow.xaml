@@ -32,9 +32,6 @@
                            Foreground="{DynamicResource TextMutedBrush}" Text="DevezTools" />
             </StackPanel>
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                <!-- 새 버전이 있을 때만 보인다. 누르면 받아 두고, 다시 누르면 바꿔 끼운 뒤 다시 시작한다(UpdateService) -->
-                <Button x:Name="UpdateButton" Style="{StaticResource PrimaryButton}" Margin="0,0,6,0" MinHeight="24" Padding="10,0" FontSize="11"
-                        VerticalAlignment="Center" Visibility="Collapsed" Click="UpdateButton_Click" WindowChrome.IsHitTestVisibleInChrome="True" />
                 <!-- 왼쪽 클릭: 라이트·다크 전환, 오른쪽 클릭: 밝기별 테마 선택 -->
                 <Button x:Name="ThemeButton" Style="{StaticResource WindowControlButton}" Margin="2,0" VerticalAlignment="Center"
                         AutomationProperties.Name="밝기 전환" Click="ThemeButton_Click" ContextMenuOpening="ThemeButton_ContextMenuOpening"
@@ -69,9 +66,37 @@
             </Grid.ColumnDefinitions>
 
             <!-- 왼쪽 레일: 도구 목록(코드에서 채운다). 길게 누르면 편집 모드: 끌어서 순서를 바꾸거나 X로 숨긴다(eghisWorks 레일 편집과 같다) -->
-            <ScrollViewer Grid.Column="0" Focusable="False" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel x:Name="RailMenuList" Margin="0,4,0,8" />
-            </ScrollViewer>
+            <DockPanel Grid.Column="0">
+                <!-- 새 버전이 있을 때만 레일 맨 아래에 보인다. 누르면 받아 두고, 다시 누르면 설치한 뒤 다시 시작한다(UpdateService).
+                     레일 단추와 같은 크기·모양에 강조색만 입힌다 -->
+                <Button x:Name="UpdateButton" DockPanel.Dock="Bottom" Margin="0,0,0,6" Visibility="Collapsed" Focusable="False"
+                        Foreground="{DynamicResource PrimaryBrush}" FontFamily="{StaticResource UiFont}" AutomationProperties.Name="업데이트"
+                        Click="UpdateButton_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Grid Height="58" Background="Transparent">
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border x:Name="IconBox" Width="44" Height="32" Background="{DynamicResource PrimarySoftBrush}" CornerRadius="10">
+                                        <Path Style="{StaticResource LucideButtonIcon}" Data="{StaticResource IconDownload}" Width="18" Height="18" />
+                                    </Border>
+                                    <ContentPresenter Margin="0,3,0,0" HorizontalAlignment="Center" TextElement.FontSize="11" TextElement.FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="IconBox" Property="Background" Value="{DynamicResource LineBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.6" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <ScrollViewer Focusable="False" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="RailMenuList" Margin="0,4,0,8" />
+                </ScrollViewer>
+            </DockPanel>
 
             <!-- 콘텐츠 면 그림자(레일 쪽으로 은은하게). 콘텐츠와 같은 모서리로 따로 그린다 -->
             <Border Grid.Column="1" Background="{DynamicResource PanelBrush}" CornerRadius="12,0,0,12" IsHitTestVisible="False">

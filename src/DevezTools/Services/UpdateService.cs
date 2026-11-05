@@ -38,15 +38,28 @@ internal static class UpdateService
         }
     }
 
-    /// <summary>설치 zip 을 받아 해시를 확인하고 풀어서 설치 파일 경로를 돌려준다.</summary>
-    public static async Task<string> DownloadAsync(Release release)
+    /// <summary>설치 zip 을 받아(진행률 0~1) 해시를 확인하고 풀어서 설치 파일 경로를 돌려준다.</summary>
+    public static async Task<string> DownloadAsync(Release release, IProgress<double> progress)
     {
         if (Directory.Exists(Folder)) Directory.Delete(Folder, true);
         Directory.CreateDirectory(Folder);
         string zip = Path.Combine(Folder, "DevezTools_Setup.zip");
-        await using (Stream source = await Http.GetStreamAsync($"{Base}/DevezTools_Setup.zip?v={release.Version}"))
-        await using (FileStream target = File.Create(zip))
-            await source.CopyToAsync(target);
+        using (HttpResponseMessage response = await Http.GetAsync($"{Base}/DevezTools_Setup.zip?v={release.Version}", HttpCompletionOption.ResponseHeadersRead))
+        {
+            response.EnsureSuccessStatusCode();
+            long total = response.Content.Headers.ContentLength ?? 0;
+            await using Stream source = await response.Content.ReadAsStreamAsync();
+            await using FileStream target = File.Create(zip);
+            var buffer = new byte[81920];
+            long done = 0;
+            int read;
+            while ((read = await source.ReadAsync(buffer)) > 0)
+            {
+                await target.WriteAsync(buffer.AsMemory(0, read));
+                done += read;
+                if (total > 0) progress.Report((double)done / total);
+            }
+        }
 
         if (Sha256Of(zip) != release.Sha256) throw new InvalidDataException("받은 설치 파일이 배포된 파일과 달라 적용하지 않았습니다.");
         ZipFile.ExtractToDirectory(zip, Folder);

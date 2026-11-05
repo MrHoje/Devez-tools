@@ -1058,8 +1058,7 @@
     <!-- 화면 가운데 잠깐 뜨는 알림(복사되었습니다 등) -->
     <Style x:Key="Toast" TargetType="{x:Type ContentControl}">
         <Setter Property="HorizontalAlignment" Value="Center" />
-        <Setter Property="VerticalAlignment" Value="Bottom" />
-        <Setter Property="Margin" Value="0,0,0,36" />
+        <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="IsHitTestVisible" Value="False" />
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Opacity" Value="0" />

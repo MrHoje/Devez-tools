@@ -13,7 +13,7 @@
     <RootNamespace>DevezTools</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Product>devezTools</Product>
     <!-- WPF 번역 리소스는 한국어만 담는다. -->
     <SatelliteResourceLanguages>ko</SatelliteResourceLanguages>

@@ -1,7 +1,4 @@
 using System.ComponentModel;
-using System.Net.Http;
-using IOException = System.IO.IOException;
-using InvalidDataException = System.IO.InvalidDataException;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -96,50 +93,21 @@ public partial class MainWindow : Window
 
     // ── 자동 업데이트(배포.md) ──
     private UpdateService.Release? _update;
-    private string? _updateSetup; // 받아서 해시까지 확인한 설치 파일
 
     private async void CheckForUpdate()
     {
         if (_update is not null) return;
         _update = await UpdateService.CheckAsync();
         if (_update is null) return;
-        UpdateButton.Content = $"v{_update.Version} 업데이트";
-        UpdateButton.ToolTip = _update.Notes;
+        UpdateButton.Content = "업데이트";
+        UpdateButton.ToolTip = $"v{_update.Version} 새 버전\n{_update.Notes}";
         UpdateButton.Visibility = Visibility.Visible;
     }
 
-    private async void UpdateButton_Click(object sender, RoutedEventArgs e)
+    // 가운데 팝업에서 노트·진행률을 보이며 받고, 설치 파일을 실행했으면 앱을 끝내 파일을 바꾸게 한다(입력은 Drafts 가 담아 둔다)
+    private void UpdateButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_update is null) return;
-        if (_updateSetup is null)
-        {
-            UpdateButton.IsEnabled = false;
-            UpdateButton.Content = "받는 중…";
-            try
-            {
-                _updateSetup = await UpdateService.DownloadAsync(_update);
-                UpdateButton.Content = "다시 시작해 적용";
-                ShowToast("새 버전을 받았습니다. 입력 중인 내용은 다시 시작하면 사라지니 정리한 뒤 누르십시오.");
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or UnauthorizedAccessException or InvalidDataException)
-            {
-                UpdateButton.Content = $"v{_update.Version} 업데이트";
-                ShowToast("새 버전을 받지 못했습니다: " + ex.Message);
-            }
-            UpdateButton.IsEnabled = true;
-            return;
-        }
-
-        try
-        {
-            UpdateService.Install(_updateSetup);
-        }
-        catch (Win32Exception ex)
-        {
-            ShowToast("설치 파일을 실행하지 못했습니다: " + ex.Message);
-            return;
-        }
-        ExitApp(); // 설치 파일이 파일을 바꿀 수 있게 끝낸다
+        if (_update is not null && new UpdateDialog(_update) { Owner = this }.ShowDialog() == true) ExitApp();
     }
 
     /// <summary>앱을 완전히 끝낸다(Ctrl+X 단추, 트레이 메뉴의 종료).</summary>
@@ -151,7 +119,13 @@ public partial class MainWindow : Window
 
     private void Show(Tool tool)
     {
-        if (!_views.TryGetValue(tool.Key, out UIElement? view)) _views[tool.Key] = view = tool.Create();
+        if (!_views.TryGetValue(tool.Key, out UIElement? view))
+        {
+            _views[tool.Key] = view = tool.Create();
+            // 지난번에 입력해 둔 글·선택을 되살리고, 고칠 때마다 다시 담는다
+            Drafts.Restore(tool.Key, view);
+            Drafts.Watch(view, SaveDrafts);
+        }
         PageTitle.Text = tool.Title;
         PageDescription.Text = tool.Description;
         PageHost.Content = view;
@@ -168,8 +142,15 @@ public partial class MainWindow : Window
             Hide();
             return;
         }
+        SaveDrafts();
         AppSettings.Save();
         base.OnClosing(e);
+    }
+
+    private void SaveDrafts()
+    {
+        foreach ((string key, UIElement view) in _views) Drafts.Capture(key, view);
+        Drafts.Save();
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)

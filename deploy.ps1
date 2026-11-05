@@ -126,4 +126,4 @@ if ($remote.notes -ne ($notes -join "`n")) { throw '공개 version.json 의 노�
 if ((Sha256 (Join-Path $check 'DevezTools_Setup.zip')) -ne $sha256) { throw '공개 설치 zip 해시가 다릅니다.' }
 Remove-Item $check -Recurse -Force
 
-Write-Host "`nv$version 배포를 확인했습니다. 실행 중인 앱은 1시간 안에 제목 줄에 업데이트 단추를 띄웁니다." -ForegroundColor Green
+Write-Host "`nv$version 배포를 확인했습니다. 실행 중인 앱은 1시간 안에 왼쪽 레일 맨 아래에 업데이트 단추를 띄웁니다." -ForegroundColor Green
