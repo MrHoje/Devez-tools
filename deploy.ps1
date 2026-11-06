@@ -1,5 +1,5 @@
 ﻿# DevezTools 배포 (배포.md 참고)
-#   .\deploy.ps1          테스트 → publish → 설치 파일 → version.json 까지 만든다(업로드 없음)
+#   .\deploy.ps1          테스트 → publish → MSI → version.json 까지 만든다(업로드 없음)
 #   .\deploy.ps1 -Upload  위 과정 뒤 R2에 올리고 공개 URL로 다시 받아 검증한다
 param([switch]$Upload)
 
@@ -9,7 +9,6 @@ $project   = Join-Path $root 'src\DevezTools\DevezTools.csproj'
 $publish   = Join-Path $root 'artifacts\publish'
 $outDir    = Join-Path $root 'artifacts\installer'
 $exe       = Join-Path $publish 'devezTools.exe'
-$zip       = Join-Path $outDir 'DevezTools_Setup.zip'
 $manifest  = Join-Path $outDir 'version.json'
 # 앱 Services\UpdateService.cs 의 Base 와 같아야 한다
 $publicBase = 'https://pub-37da98a9e72d4514aed3533375fb7368.r2.dev/deveztools'
@@ -66,34 +65,29 @@ if ($LASTEXITCODE -ne 0) { throw 'publish 실패' }
 $fileVersion = (Get-Item $exe).VersionInfo.FileVersion
 if ($fileVersion -ne "$version.0") { throw "exe 파일 버전($fileVersion)이 csproj($version)와 다릅니다." }
 
-# ── 3. 설치 파일 + zip ──
-Step '[3/4] Inno Setup'
-$iscc = @(
-    "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
-    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $iscc) { throw 'Inno Setup 6 이 없습니다. https://jrsoftware.org/isdl.php 에서 설치하십시오.' }
-& $iscc /Q "/DAppVersion=$version" (Join-Path $root 'installer\setup.iss')
-if ($LASTEXITCODE -ne 0) { throw 'Inno Setup 컴파일 실패' }
-Compress-Archive -Path (Join-Path $outDir "DevezTools_Setup_$version.exe") -DestinationPath $zip -Force
+# ── 3. MSI (WiX: installer\DevezTools.Installer.wixproj, NuGet 에서 받으므로 따로 설치하지 않는다) ──
+Step '[3/4] MSI'
+if (Test-Path $outDir) { Remove-Item $outDir -Recurse -Force }
+dotnet build (Join-Path $root 'installer\DevezTools.Installer.wixproj') -c Release "-p:Version=$version" -o $outDir --nologo
+if ($LASTEXITCODE -ne 0) { throw 'MSI 빌드 실패' }
+$msi = Join-Path $outDir "DevezTools_Setup_$version.msi"
 
 # ── 4. version.json (BOM 없는 UTF-8. 노트 한글은 파일에서 읽은 문자열이라 깨지지 않는다) ──
-# sha256 은 설치 zip 의 해시다. 앱은 이 zip 을 받아 맞을 때만 설치한다(exe 옆 OCR 라이브러리·모델까지 바뀌도록).
-$sha256 = Sha256 $zip
+# sha256 은 MSI 의 해시다. 앱은 이 MSI 를 받아 맞을 때만 설치한다(exe 옆 OCR 라이브러리·모델까지 바뀌도록).
+$sha256 = Sha256 $msi
 $json = [ordered]@{ version = $version; sha256 = $sha256; notes = ($notes -join "`n") } | ConvertTo-Json
 [IO.File]::WriteAllText($manifest, $json, $utf8)
 
 Write-Host ''
-Write-Host "설치 zip: $zip ($([math]::Round((Get-Item $zip).Length / 1MB, 1)) MB)"
-Write-Host "sha256  : $sha256"
+Write-Host "MSI    : $msi ($([math]::Round((Get-Item $msi).Length / 1MB, 1)) MB)"
+Write-Host "sha256 : $sha256"
 
 if (-not $Upload) {
     Write-Host "`n업로드 없이 끝냈습니다. 배포하려면 .\deploy.ps1 -Upload" -ForegroundColor Yellow
     return
 }
 
-# ── 5. R2 업로드: 설치 zip → version.json(항상 마지막 = 사용자에게 알리는 신호) ──
+# ── 5. R2 업로드: MSI → version.json(항상 마지막 = 사용자에게 알리는 신호) ──
 Step '[4/4] R2 업로드'
 $keyPath = @(
     (Join-Path $root '.local\cloudflare-keys.json'),
@@ -110,20 +104,20 @@ function Put($key, $path, $type) {
     if ($code -ne '200') { throw "$key 업로드 실패: HTTP $code (토큰이 401/403이면 키 파일을 갱신하십시오)" }
     Write-Host "  $key"
 }
-Put 'deveztools/DevezTools_Setup.zip' $zip 'application/zip'
+Put 'deveztools/DevezTools_Setup.msi' $msi 'application/x-msi'
 Put 'deveztools/version.json' $manifest 'application/json'
 
 # ── 6. 공개 URL 검증(캐시 우회): 받은 파일이 방금 만든 파일과 같아야 한다 ──
 $check = Join-Path $env:TEMP 'deveztools_verify'
 New-Item -ItemType Directory -Path $check -Force | Out-Null
-foreach ($name in 'version.json', 'DevezTools_Setup.zip') {
+foreach ($name in 'version.json', 'DevezTools_Setup.msi') {
     curl.exe -sf "$publicBase/${name}?nocache=$(Get-Random)" -o (Join-Path $check $name)
     if ($LASTEXITCODE -ne 0) { throw "$name 을 공개 URL에서 받지 못했습니다." }
 }
 $remote = [IO.File]::ReadAllText((Join-Path $check 'version.json'), $utf8) | ConvertFrom-Json
 if ($remote.version -ne $version -or $remote.sha256 -ne $sha256) { throw '공개 version.json 의 버전·해시가 다릅니다.' }
 if ($remote.notes -ne ($notes -join "`n")) { throw '공개 version.json 의 노트가 다릅니다(인코딩 확인).' }
-if ((Sha256 (Join-Path $check 'DevezTools_Setup.zip')) -ne $sha256) { throw '공개 설치 zip 해시가 다릅니다.' }
+if ((Sha256 (Join-Path $check 'DevezTools_Setup.msi')) -ne $sha256) { throw '공개 MSI 해시가 다릅니다.' }
 Remove-Item $check -Recurse -Force
 
 Write-Host "`nv$version 배포를 확인했습니다. 실행 중인 앱은 1시간 안에 왼쪽 레일 맨 아래에 업데이트 단추를 띄웁니다." -ForegroundColor Green

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <!-- 사용자 폴더에 설치해 앱의 자동 업데이트(msiexec /qn)가 관리자 권한 없이 다시 설치한다. UpgradeCode 는 바꾸지 않는다. -->
+  <Package Name="DevezTools" Manufacturer="Devez" Version="$(var.Version)" UpgradeCode="5F3A8C21-7B4D-4E6A-9C2F-1D8E0B7A6C35"
+           Scope="perUser" Language="1042" Codepage="949">
+    <SummaryInformation Codepage="949" />
+    <MajorUpgrade DowngradeErrorMessage="더 새 버전의 DevezTools가 이미 설치되어 있습니다." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="..\src\DevezTools\Assets\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <!-- .NET 10 Desktop Runtime(10.x)이 없으면 설치하지 않는다 -->
+    <netfx:DotNetCompatibilityCheck Property="DOTNETDESKTOP10" RuntimeType="desktop" Platform="x64" Version="10.0.0" RollForward="latestMinor" />
+    <Launch Condition="Installed OR DOTNETDESKTOP10 = &quot;0&quot;"
+            Message=".NET 10 Desktop Runtime이 필요합니다. https://dotnet.microsoft.com/ko-kr/download/dotnet/10.0 에서 설치한 뒤 다시 실행해 주십시오." />
+
+    <!-- 실행 중인 앱(트레이 포함)은 Windows 종료 신호로 정상 종료시킨다(입력 저장 후 끝난다). 창 닫기는 트레이로 숨기기만 한다. -->
+    <util:CloseApplication Target="devezTools.exe" CloseMessage="no" EndSessionMessage="yes" RebootPrompt="no" Timeout="5000" />
+
+    <!-- 예전 Inno 설치본(%LocalAppData%\DevezTools)이 있으면 조용히 제거한다 -->
+    <Property Id="OLDINNOUNINSTALL">
+      <DirectorySearch Id="OldInnoFolder" Path="[LocalAppDataFolder]DevezTools" Depth="0">
+        <FileSearch Name="unins000.exe" />
+      </DirectorySearch>
+    </Property>
+    <CustomAction Id="RemoveOldInno" Property="OLDINNOUNINSTALL" ExeCommand="/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" Execute="immediate" Return="ignore" />
+
+    <!-- 설치가 끝나면 앱을 띄운다. 앱의 자동 업데이트는 LAUNCHARGS 로 updated 인자를 넘겨 완료 알림을 띄우게 한다(UpdateService.Install) -->
+    <Property Id="LAUNCHARGS" Secure="yes" />
+    <CustomAction Id="LaunchApp" FileRef="AppExe" ExeCommand="[LAUNCHARGS]" Execute="immediate" Return="asyncNoWait" />
+
+    <InstallExecuteSequence>
+      <Custom Action="RemoveOldInno" Before="InstallInitialize" Condition="OLDINNOUNINSTALL AND NOT Installed" />
+      <Custom Action="LaunchApp" After="InstallFinalize" Condition="NOT Installed" />
+    </InstallExecuteSequence>
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalPrograms" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="DevezTools" />
+      </Directory>
+    </StandardDirectory>
+
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Component Id="MainExe">
+        <File Id="AppExe" Source="$(var.PublishDir)\devezTools.exe" />
+      </Component>
+      <!-- 나머지 publish 결과물(OCR 네이티브 라이브러리·models\·글꼴 라이선스) -->
+      <Files Include="$(var.PublishDir)\**">
+        <Exclude Files="$(var.PublishDir)\devezTools.exe" />
+      </Files>
+    </ComponentGroup>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut">
+        <Shortcut Id="AppShortcut" Name="DevezTools" Target="[#AppExe]" WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKCU" Key="Software\Devez\DevezTools" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <Feature Id="Main">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+  </Package>
+</Wix>

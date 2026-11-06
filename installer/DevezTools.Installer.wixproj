@@ -1,0 +1,15 @@
+<!-- DevezTools MSI. deploy.ps1 이 -p:Version=x.y.z 로 csproj 버전을 넘겨 빌드한다(WiX 는 NuGet 에서 받으므로 따로 설치하지 않는다). -->
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>DevezTools_Setup_$(Version)</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <DefineConstants>Version=$(Version);PublishDir=..\artifacts\publish</DefineConstants>
+    <!-- ICE 검사는 끈다: 갓 만든 MSI 를 백신이 잡고 있으면 검사가 데이터베이스를 못 열어(WIX0301) 빌드가 들쑥날쑥 실패한다.
+         설치 확인은 실제 설치·제거로 한다(배포.md). 켜서 볼 때는 사용자 폴더 설치라 ICE38·64·91 은 무시한다. -->
+    <SuppressValidation>true</SuppressValidation>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Netfx.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+</Project>
